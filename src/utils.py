@@ -23,6 +23,14 @@ def save_object(object, file_path: str) -> bool:
         raise CustomException(e, sys)
 
 
+def load_object(file_path: str):
+    try:
+        with open(file=file_path, mode="rb") as file_obj:
+            return dill.load(file_obj)
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
 def calculate_model_score(y, y_pred, prefix):
     mae = mean_absolute_error(y, y_pred)
     mse = mean_squared_error(y, y_pred)
@@ -40,18 +48,28 @@ def calculate_model_score(y, y_pred, prefix):
 def evaluate_models(X_train, y_train, X_test, y_test, models, params):
     try:
         report = {}
+        trained_models = {}  # 🔥 ADD THIS
 
         for i in range(len(list(models.values()))):
             model = list(models.values())[i]
             param = list(params.values())[i]
             model_name = list(models.keys())[i]
+
             logging.info("Starting Model Training of %s", model_name)
 
             random_cv = RandomizedSearchCV(
-                estimator=model, cv=3, param_distributions=param, n_jobs=-1, n_iter=50
+                estimator=model,
+                cv=3,
+                param_distributions=param,
+                n_jobs=-1,
+                n_iter=50,
+                random_state=42,
             )
 
             random_cv.fit(X_train, y_train)
+
+            # 🔥 STORE TRAINED GRID
+            trained_models[model_name] = random_cv
 
             y_train_pred = random_cv.predict(X_train)
             y_test_pred = random_cv.predict(X_test)
@@ -69,9 +87,9 @@ def evaluate_models(X_train, y_train, X_test, y_test, models, params):
                 "Best Params": random_cv.best_params_,
             }
 
-            report[list(models.keys())[i]] = model_report
+            report[model_name] = model_report
 
-        return report
+        return report, trained_models  # 🔥 RETURN BOTH
 
     except Exception as e:
         raise CustomException(e, sys)

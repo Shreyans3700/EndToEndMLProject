@@ -44,7 +44,7 @@ class ModelTrainer:
 
             model_params = ModelsHyperParameterConfigs()
 
-            model_report: dict = evaluate_models(
+            model_report, trained_models = evaluate_models(
                 X_train, y_train, X_test, y_test, models, model_params.params
             )
 
@@ -55,11 +55,15 @@ class ModelTrainer:
                 for scr in model_report.values()
             ]
 
-            best_model_score_index = test_r2_scores.index(max(sorted(test_r2_scores)))
+            best_model_score_index = test_r2_scores.index(max(test_r2_scores))
 
             best_model_name = list(model_report.keys())[best_model_score_index]
 
-            best_model = models[best_model_name]
+            best_model_grid = trained_models[best_model_name]
+
+            save_object(
+                best_model_grid, self.model_trainer_config.trained_model_file_path
+            )
 
             best_score = test_r2_scores[best_model_score_index]
 
@@ -70,8 +74,6 @@ class ModelTrainer:
             logging.info(
                 f"Best model found: {best_model_name} with R2 score: {best_score}"
             )
-
-            save_object(best_model, self.model_trainer_config.trained_model_file_path)
 
         except Exception as e:
             raise CustomException(e, sys)
